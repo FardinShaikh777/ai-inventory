@@ -1341,9 +1341,16 @@
             try {
                 const response = await fetch(CONFIG.webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatInput: text, sessionId: STATE.sessionId }) });
                 removeTypingIndicator(); if (!response.ok) throw new Error(`Error ${response.status}`);
-                const data = await response.json(); const reply = data.output || (data.body && data.body.output) || JSON.stringify(data);
+                const rawText = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(rawText);
+                } catch (e) {
+                    throw new Error(rawText ? `Invalid JSON from server: ${rawText}` : "Empty response from server (Workflow might have failed internally)");
+                }
+                const reply = data.output || (data.body && data.body.output) || JSON.stringify(data);
                 appendLog(reply, 'bot'); setStatus('status-webhook', 'ok');
-            } catch (err) { removeTypingIndicator(); appendLog(`Fetch Error: ${err.message}`, 'error'); setStatus('status-webhook', 'error'); }
+            } catch (err) { removeTypingIndicator(); appendLog(`Error: ${err.message}`, 'error'); setStatus('status-webhook', 'error'); }
         }
 
         function quickRestock(sku, name) {
